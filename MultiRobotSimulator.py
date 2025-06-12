@@ -75,17 +75,22 @@ class MultiRobotSimulator:
                     node = r.current
 
                     kinder = {k: v for k, v in self.graph[node].items() if v != 'r'}
+
                     if len(kinder) != 0:
                         kinder_g = [k for k, v in kinder.items() if v == 'g']
+
                         if len(kinder_g) != 0:
                             zufall = random.choice(kinder_g)
                             self.graph[node][zufall] = 'y'
                             color_node[node] = 'yellow'
                             r.target = zufall
+                            r.color = 'green'
                         else:
                             kinder_y = [k for k, v in kinder.items() if v == 'y']
                             zufall = random.choice(kinder_y)
                             r.target = zufall
+                            r.color = 'yellow'
+
                     else:
 
                         if r.current != self.ziel:
@@ -93,9 +98,15 @@ class MultiRobotSimulator:
                             r.target = eltern
                             self.graph[eltern][r.current] = 'r'
                             color_node[node] = 'red'
+                            r.color = 'yellow'
+
                         else:
-                            ziel_erreicht = True
+
+                            r.role = 'Raus'
+                            r.color = 'blue'
+
                 else:
+
                     ziel_x, ziel_y = node_x[r.target], node_y[r.target]
                     r.x += (node_x[r.target]- node_x[r.current]) /steps_robot
                     r.y += (node_y[r.target] - node_y[r.current]) /steps_robot
@@ -105,12 +116,20 @@ class MultiRobotSimulator:
                         r.y = ziel_y
                         r.current = r.target
 
+
+
                 frame_data.append(go.Scatter(x=[r.x], y=[r.y], mode='markers+text',
                                              marker=dict(size=30, color=r.color),
                                              text=[r.name], textposition="top center"))
 
             frames.append(go.Frame(data=frame_data, name=f"f{t}"))
             t += 1
+
+            for r in self.robots:
+                if r.role != 'Raus':
+                    break
+                ziel_erreicht = True
+
             if ziel_erreicht:
                 break
 

@@ -1,14 +1,14 @@
 
 
 class Robot:
-    def __init__(self, name, role, baum, start, ziel):
+    def __init__(self, name, baum, start, ziel):
         self.name = name
         self.color = 'black'
         self.baum = baum
         self.start = start
         self.ziel = ziel
 
-        self.role = role
+        self.role = ''
 
         self.current = self.start
         self.target = self.start
