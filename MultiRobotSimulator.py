@@ -61,8 +61,8 @@ class MultiRobotSimulator:
         frames = []
         ziel_erreicht = False
         t = 0
-        while len(self.gruppen) != 0:
-        #for i in range(100):
+        #while len(self.gruppen) != 0:
+        for i in range(280):
 
             frame_data = [
                 go.Scatter(x=edge_x, y=edge_y, mode='lines',
@@ -72,148 +72,181 @@ class MultiRobotSimulator:
                            text=node_text, textposition="top center")
             ]
 
+            # Suche Ampel am aktuellen Knoten
+            for i in self.gruppen:
+                for g in self.gruppen:
+                    if i != g and i.current == g.current  and color_node[g.current] == 'red':
+                        # Roboter der Ampel übernehmen
+                        g.roboter += i.roboter
+                        g.anzahl = len(g.roboter)
+                        # Entferne die Ampel aus der Gruppenliste
+                        self.gruppen.remove(i)
+                        eltern = self.getEltern(g.current)
+                        g.target = eltern
+                        g.role = 'Head'
+                        break
+
             grupp_akt = []
             for g in self.gruppen:
 
-                # Robot an der Kreuzung
-                if g.current == g.target:
-                    kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
 
-                    if color_node[g.current] == 'green':
-                        print(g.current)
+                if g.role == 'Head':
+                    print(t)
+                    # Robot an der Kreuzung
+                    if g.current == g.target:
+                        kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
 
-                    # Es gibt noch Pfade
-                    if len(kinder) != 0:
-                        color_node[g.current] = 'yellow'
+                        if color_node[g.current] == 'green' and len(kinder) > 0 and g.current != 0:
 
-                        # Es gibt nur ein Pfad
-                        if len(kinder) == 1:
-                            g.target = list(kinder.keys())[0]
-                            grupp_akt.append(g)
+                            if g.anzahl > 1:
+                                ampel = g.roboter[-1]  # Oder g.roboter[-1]
+                                g.roboter.remove(ampel)
 
-                        # Es gibt mehrere Pfade
-                        else:
-                            kinder_g = [k for k, v in kinder.items() if v == 'g']
+                                # Neue Gruppe für die Ampel erzeugen
 
-                            # Es gibt grüne Pfade
-                            if len(kinder_g) != 0:
-
-                                anzahlG = len(kinder_g)
-
-                                # Es gibt 3 Pfade, aber 2 Roboter
-                                if anzahlG == 3 and len(g.roboter) == 2:
-                                    new_gruppen = [[] for _ in range(len(g.roboter))]
-
-                                    for i, elem in enumerate(g.roboter):
-                                        new_gruppen[i % anzahlG].append(elem)
-
-                                    # Für jede neue Gruppe ein eigenes Ziel zuweisen
-                                    for i in range(anzahlG):
-                                        zufall = random.choice(kinder_g)
-                                        kinder_g.remove(zufall)
-
-                                        group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
-                                        group.target = zufall
-                                        grupp_akt.append(group)
-
-                                # Es gibt nur ein Robot
-                                elif len(g.roboter) == 1:
-
-                                    zufall = random.choice(kinder_g)
-                                    kinder_g.remove(zufall)
-
-                                    g.target = zufall
-                                    grupp_akt.append(g)
-
-                                # Normale Verteilung
-                                else:
-
-                                    new_gruppen = [[] for _ in range(anzahlG)]
-
-                                    for i, elem in enumerate(g.roboter):
-                                        new_gruppen[i % anzahlG].append(elem)
-
-                                    # Für jede neue Gruppe ein eigenes Ziel zuweisen
-                                    for i in range(anzahlG):
-                                        zufall = random.choice(kinder_g)
-                                        kinder_g.remove(zufall)
-
-                                        group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
-                                        group.target = zufall
-                                        grupp_akt.append(group)
-
-                            # Es gibt nur gelbe Pfade
+                                ampel_gruppe = Gruppe([ampel], g.current, g.x, g.y)
+                                ampel_gruppe.role = 'Ampel'
+                                grupp_akt.append(ampel_gruppe)
                             else:
+                                g.role = 'Ampel'
+                                grupp_akt.append(g)
 
-                                kinder_y = [k for k, v in kinder.items() if v == 'y']
-                                anzahlG = len(kinder_y)
 
-                                # Es 3 Pfade, aber 2 Roboter
-                                if anzahlG == 3 and len(g.roboter) == 2:
-                                    new_gruppen = [[] for _ in range(len(g.roboter))]
 
-                                    for i, elem in enumerate(g.roboter):
-                                        new_gruppen[i % anzahlG].append(elem)
+                        # Es gibt noch Pfade
+                        if len(kinder) != 0:
+                            color_node[g.current] = 'yellow'
 
-                                    # Für jede neue Gruppe ein eigenes Ziel zuweisen
-                                    for i in range(anzahlG):
-                                        zufall = random.choice(kinder_y)
-                                        kinder_y.remove(zufall)
+                            # Es gibt nur ein Pfad
+                            if len(kinder) == 1:
+                                g.target = list(kinder.keys())[0]
+                                grupp_akt.append(g)
 
-                                        group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
-                                        group.target = zufall
-                                        grupp_akt.append(group)
+                            # Es gibt mehrere Pfade
+                            else:
+                                kinder_g = [k for k, v in kinder.items() if v == 'g']
 
-                                # Es gibt nur ein Robot
-                                elif len(g.roboter) == 1:
+                                # Es gibt grüne Pfade
+                                if len(kinder_g) != 0:
 
-                                    zufall = random.choice(kinder_y)
-                                    kinder_y.remove(zufall)
+                                    anzahlG = len(kinder_g)
 
-                                    g.target = zufall
-                                    grupp_akt.append(g)
+                                    # Es gibt 3 Pfade, aber 2 Roboter
+                                    if anzahlG == 3 and len(g.roboter) == 2:
+                                        new_gruppen = [[] for _ in range(len(g.roboter))]
 
-                                # Normale Verteilung
+                                        for i, elem in enumerate(g.roboter):
+                                            new_gruppen[i % anzahlG].append(elem)
+
+                                        # Für jede neue Gruppe ein eigenes Ziel zuweisen
+                                        for i in range(len(new_gruppen)):
+                                            zufall = random.choice(kinder_g)
+                                            kinder_g.remove(zufall)
+                                            group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
+                                            group.target = zufall
+                                            grupp_akt.append(group)
+
+                                    # Es gibt nur ein Robot
+                                    elif len(g.roboter) == 1:
+
+                                        zufall = random.choice(kinder_g)
+                                        kinder_g.remove(zufall)
+
+                                        g.target = zufall
+                                        grupp_akt.append(g)
+
+                                    # Normale Verteilung
+                                    else:
+
+                                        new_gruppen = [[] for _ in range(anzahlG)]
+
+                                        for i, elem in enumerate(g.roboter):
+                                            new_gruppen[i % anzahlG].append(elem)
+
+                                        # Für jede neue Gruppe ein eigenes Ziel zuweisen
+                                        for i in range(anzahlG):
+                                            zufall = random.choice(kinder_g)
+                                            kinder_g.remove(zufall)
+
+                                            group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
+                                            group.target = zufall
+                                            grupp_akt.append(group)
+
+                                # Es gibt nur gelbe Pfade
                                 else:
 
-                                    new_gruppen = [[] for _ in range(anzahlG)]
+                                    kinder_y = [k for k, v in kinder.items() if v == 'y']
+                                    anzahlG = len(kinder_y)
 
-                                    for i, elem in enumerate(g.roboter):
-                                        new_gruppen[i % anzahlG].append(elem)
+                                    # Es 3 Pfade, aber 2 Roboter
+                                    if anzahlG == 3 and len(g.roboter) == 2:
+                                        new_gruppen = [[] for _ in range(len(g.roboter))]
 
-                                    # Für jede neue Gruppe ein eigenes Ziel zuweisen
-                                    for i in range(anzahlG):
+                                        for i, elem in enumerate(g.roboter):
+                                            new_gruppen[i % anzahlG].append(elem)
+
+                                        # Für jede neue Gruppe ein eigenes Ziel zuweisen
+                                        for i in range(anzahlG):
+                                            zufall = random.choice(kinder_y)
+                                            kinder_y.remove(zufall)
+
+                                            group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
+                                            group.target = zufall
+                                            grupp_akt.append(group)
+
+                                    # Es gibt nur ein Robot
+                                    elif len(g.roboter) == 1:
+
                                         zufall = random.choice(kinder_y)
                                         kinder_y.remove(zufall)
 
-                                        group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
-                                        group.target = zufall
-                                        grupp_akt.append(group)
+                                        g.target = zufall
+                                        grupp_akt.append(g)
 
-                    # Es gibt keine Pfade mehr
+                                    # Normale Verteilung
+                                    else:
+
+                                        new_gruppen = [[] for _ in range(anzahlG)]
+
+                                        for i, elem in enumerate(g.roboter):
+                                            new_gruppen[i % anzahlG].append(elem)
+
+                                        # Für jede neue Gruppe ein eigenes Ziel zuweisen
+                                        for i in range(anzahlG):
+                                            zufall = random.choice(kinder_y)
+                                            kinder_y.remove(zufall)
+
+                                            group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
+                                            group.target = zufall
+                                            grupp_akt.append(group)
+
+                        # Es gibt keine Pfade mehr
+                        else:
+                            # Kein Ziel -> zurück
+                            if g.current != self.ziel:
+
+                                eltern = self.getEltern(g.current)
+                                g.target = eltern
+                                self.graph[eltern][g.current] = 'r'
+                                color_node[g.current] = 'red'
+                                grupp_akt.append(g)
+
+
+
+                    # Robot im Rohr
                     else:
-                        # Kein Ziel -> zurück
-                        if g.current != self.ziel:
-                            eltern = self.getEltern(g.current)
-                            g.target = eltern
-                            self.graph[eltern][g.current] = 'r'
-                            color_node[g.current] = 'red'
-                            grupp_akt.append(g)
-                        # Ziel!!!
+                        ziel_x, ziel_y = node_x[g.target], node_y[g.target]
+                        g.x += (node_x[g.target]- node_x[g.current]) /steps_robot
+                        g.y += (node_y[g.target] - node_y[g.current]) /steps_robot
+                        if math.isclose(g.x, ziel_x, abs_tol=0.01) and math.isclose(g.y, ziel_y, abs_tol=0.01):
+                            g.x = ziel_x
+                            g.y = ziel_y
+                            g.current = g.target
 
-
-
-                # Robot im Rohr
+                        grupp_akt.append(g)
                 else:
-                    ziel_x, ziel_y = node_x[g.target], node_y[g.target]
-                    g.x += (node_x[g.target]- node_x[g.current]) /steps_robot
-                    g.y += (node_y[g.target] - node_y[g.current]) /steps_robot
-                    if math.isclose(g.x, ziel_x, abs_tol=0.01) and math.isclose(g.y, ziel_y, abs_tol=0.01):
-                        g.x = ziel_x
-                        g.y = ziel_y
-                        g.current = g.target
-
                     grupp_akt.append(g)
+
 
 
             # Plot die Gruppen
