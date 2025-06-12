@@ -10,8 +10,3 @@ class Robot:
 
         self.role = ''
 
-        self.current = self.start
-        self.target = self.start
-        self.x = 0
-        self.y = 0
-

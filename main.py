@@ -1,3 +1,4 @@
+import gruppe
 from MultiRobotSimulator import MultiRobotSimulator
 from baum import Baum
 from gruppe import Gruppe
@@ -8,22 +9,13 @@ kanten = {
     0: [1],
     1: [2, 3, 4],
     2: [5, 6, 7],
-    3: [9, 40],
-    4: [11, 12, 13],
-    5: [14, 15],
-    6: [16, 17],
-    7: [18, 19],
-    11: [20, 41],
-    12: [21, 8],
-    13: [22, 10],
-    20: [23, 24],
-    21: [25, 26],
-    22: [27, 28, 29],
-    25: [30, 31],
-    26: [32, 33],
-    27: [34, 35],
-    34: [36, 37],
-    36: [38, 39]
+    3: [8, 9],
+    4: [10, 11],
+    5: [12, 13],
+    7: [14, 15],
+    11: [16, 17],
+    14: [18, 19, 20],
+    16: [21, 22, 23]
 }
 
 baum = Baum()
@@ -32,10 +24,8 @@ for eltern, kinder in kanten.items():
         baum.füge_kante_hinzu(eltern, kind)
 
 
-ziel = 38
+ziel = 18
 
-for i in range(42):
-    baum.setze_farbe(i, 'green')
 baum.setze_farbe(ziel, 'blue')
 
 roboter = [
@@ -43,12 +33,17 @@ roboter = [
     Robot(name="ii", baum=baum, start=0, ziel=ziel),
     Robot(name="iii", baum=baum, start=0, ziel=ziel),
     Robot(name="iv", baum=baum, start=0, ziel=ziel),
-    Robot(name="v", baum=baum, start=0, ziel=ziel)
+    Robot(name="v", baum=baum, start=0, ziel=ziel),
+    Robot(name="vi", baum=baum, start=0, ziel=ziel),
+    Robot(name="vii", baum=baum, start=0, ziel=ziel),
+    Robot(name="viii", baum=baum, start=0, ziel=ziel),
+    Robot(name="ix", baum=baum, start=0, ziel=ziel),
+    Robot(name="x", baum=baum, start=0, ziel=ziel)
 ]
 
-gruppe = Gruppe(roboter)
+gruppe = Gruppe(roboter, start=0, x=0, y=0)
 
-gruppe.print()
 
-sim = MultiRobotSimulator(baum, roboter, ziel)
+
+sim = MultiRobotSimulator(baum, gruppe, ziel)
 sim.animate(steps_robot=10)
