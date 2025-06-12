@@ -5,9 +5,22 @@ class Baum:
         self.knoten = set()
         self.kanten = dict()  # Eltern -> [Kinder]
         self.pos = {}         # Knotennummer -> (x, y)
+        self.knoten_farben = {}
+
+    def setze_farbe(self, knoten, farbe):
+        self.knoten_farben[knoten] = farbe
+
+    def getColor(self, knote):
+        return self.knoten_farben.get(knote)
 
     def getKinder(self, knote):
         return self.kanten[knote]
+
+    def finde_eltern(self, kind):
+        for eltern, kinder in self.kanten.items():
+            if kind in kinder:
+                return eltern
+        return None
 
     def füge_knoten_hinzu(self, knoten):
         self.knoten.add(knoten)
@@ -19,14 +32,10 @@ class Baum:
         self.füge_knoten_hinzu(kind)
         self.kanten[eltern].append(kind)
 
-    def zeige_baumstruktur(self, aktueller_knoten=None, ebene=0):
-        if aktueller_knoten is None:
-            kinder = {k for l in self.kanten.values() for k in l}
-            wurzel = (self.knoten - kinder).pop()
-            aktueller_knoten = wurzel
-        print("  " * ebene + f"- {aktueller_knoten}")
-        for kind in self.kanten.get(aktueller_knoten, []):
-            self.zeige_baumstruktur(kind, ebene + 1)
+    def lösche_kante(self, eltern, kind):
+        if eltern in self.kanten and kind in self.kanten[eltern]:
+            self.kanten[eltern].remove(kind)
+
 
     def _berechne_positionen(self):
         self.pos = {}
@@ -44,64 +53,6 @@ class Baum:
         wurzel = (self.knoten - kinder).pop()
         dfs(wurzel, 0, 0, 4)
 
-    def finde_pfad(self, start, ziel):
-        pfad = []
-        gefunden = False
 
-        def dfs(knoten, current_path):
-            nonlocal gefunden
-            if gefunden:
-                return
-            current_path.append(knoten)
-            if knoten == ziel:
-                pfad.extend(current_path)
-                gefunden = True
-                return
-            for kind in self.kanten.get(knoten, []):
-                dfs(kind, current_path)
-            current_path.pop()
 
-        dfs(start, [])
-        return pfad
 
-    def plot(self):
-        self._berechne_positionen()
-        edge_x = []
-        edge_y = []
-        for eltern, kinder in self.kanten.items():
-            for kind in kinder:
-                x0, y0 = self.pos[eltern]
-                x1, y1 = self.pos[kind]
-                edge_x += [x0, x1, None]
-                edge_y += [y0, y1, None]
-
-        node_x = [self.pos[k][0] for k in self.knoten]
-        node_y = [self.pos[k][1] for k in self.knoten]
-        node_text = [str(k) for k in self.knoten]
-
-        fig = go.Figure()
-
-        fig.add_trace(go.Scatter(
-            x=edge_x, y=edge_y,
-            mode='lines',
-            line=dict(color='black', width=2),
-            hoverinfo='none'
-        ))
-
-        fig.add_trace(go.Scatter(
-            x=node_x, y=node_y,
-            mode='markers+text',
-            marker=dict(size=20, color='lightblue'),
-            text=node_text,
-            textposition='top center',
-            hoverinfo='text'
-        ))
-
-        fig.update_layout(
-            title="Baumstruktur",
-            showlegend=False,
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            plot_bgcolor='white'
-        )
-        fig.show()

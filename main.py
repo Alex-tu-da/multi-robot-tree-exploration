@@ -36,12 +36,15 @@ baum.füge_kante_hinzu(16, 21)
 baum.füge_kante_hinzu(16, 22)
 baum.füge_kante_hinzu(16, 23)
 
+for i in range(24):
+    baum.setze_farbe(i, 'white')
+baum.setze_farbe(18, 'blue')
 
 roboter = [
-    Robot(name="1", color="red", baum=baum, start=0),
-    Robot(name="2", color="green", baum=baum, start=0),
-    Robot(name="3", color="orange", baum=baum, start=0)
+    #Robot(name="1", color="red", baum=baum, start=0),
+    #Robot(name="2", color="green", baum=baum, start=0),
+    Robot(name="3", color="orange", role='Head', baum=baum, start=0, ziel=18)
 ]
 
-sim = MultiRobotSimulator(baum, roboter)
+sim = MultiRobotSimulator(baum, roboter, 18)
 sim.animate()

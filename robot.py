@@ -3,14 +3,18 @@ import plotly.graph_objects as go
 from baum import Baum
 
 class Robot:
-    def __init__(self, name, color, baum, start, steps_pro_kante=10):
+    def __init__(self, name, color, role, baum, start, ziel, steps_pro_kante=10):
         self.name = name
         self.color = color
         self.baum = baum
         self.start = start
+        self.ziel = ziel
+        self.role = role
+
         self.steps_per_edge = steps_pro_kante
         self.baum._berechne_positionen()
         self.positionen = baum.pos
+
         self.pfad = self.random_pfad()
 
     def random_pfad(self):
@@ -19,13 +23,39 @@ class Robot:
         aktueller = self.start
         besucht = set([aktueller])
         while True:
-            kinder = [k for k in self.baum.kanten.get(aktueller, []) if k not in besucht]
+
+            # Hole alle Kinder von 'aktueller'
+            kinder = []
+            alle_kinder = self.baum.getKinder(aktueller)
+            # Füge nur die Kinder hinzu, die noch nicht besucht wurden
+            for k in alle_kinder:
+                if k not in besucht:
+                    kinder.append(k)
+
             if not kinder:
-                break
-            nächster = random.choice(kinder)
-            pfad.append(nächster)
-            besucht.add(nächster)
-            aktueller = nächster
+
+                if aktueller == self.ziel:
+                    break
+                else:
+                    nächster = self.baum.finde_eltern(aktueller)
+                    pfad.append(nächster)
+                    aktueller = nächster
+
+
+
+            elif len(kinder) == 1:
+                nächster = kinder[0]
+                pfad.append(nächster)
+                besucht.add(nächster)
+                aktueller = nächster
+            else:
+                nächster = random.choice(kinder)
+                pfad.append(nächster)
+                besucht.add(nächster)
+                aktueller = nächster
+
+
+
         return pfad
 
     def get_positions(self):
