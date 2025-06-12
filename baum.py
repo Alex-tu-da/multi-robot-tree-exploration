@@ -1,11 +1,12 @@
-import plotly.graph_objects as go
+
 
 class Baum:
     def __init__(self):
         self.knoten = set()
-        self.kanten = dict()  # Eltern -> [Kinder]
+        self.kanten = {}  # Eltern -> [Kinder]
         self.pos = {}         # Knotennummer -> (x, y)
         self.knoten_farben = {}
+
 
     def setze_farbe(self, knoten, farbe):
         self.knoten_farben[knoten] = farbe
@@ -25,12 +26,14 @@ class Baum:
     def füge_knoten_hinzu(self, knoten):
         self.knoten.add(knoten)
         if knoten not in self.kanten:
-            self.kanten[knoten] = []
+            self.kanten[knoten] = {}
 
     def füge_kante_hinzu(self, eltern, kind):
         self.füge_knoten_hinzu(eltern)
         self.füge_knoten_hinzu(kind)
-        self.kanten[eltern].append(kind)
+        if eltern not in self.kanten:
+            self.kanten[eltern] = {}
+        self.kanten[eltern][kind] = 'g'
 
     def lösche_kante(self, eltern, kind):
         if eltern in self.kanten and kind in self.kanten[eltern]:

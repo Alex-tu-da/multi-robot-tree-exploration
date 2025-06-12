@@ -1,14 +1,12 @@
 import math
 import random
-import plotly.graph_objects as go
 
 
 class MultiRobotSimulator:
     def __init__(self, baum, roboter_liste, ziel):
         self.baum = baum
-        self.baum._berechne_positionen()
         self.robots = roboter_liste
-
+        self.max_len = max(len(r.get_positions()) for r in roboter_liste)
 
         self.graph = baum.kanten
         self.ziel = ziel
@@ -22,6 +20,7 @@ class MultiRobotSimulator:
         return None  # steht außerhalb der Schleife
 
     def animate(self, steps_robot):
+        import plotly.graph_objects as go
 
         edge_x, edge_y = [], []
         for eltern, kinder in self.baum.kanten.items():
@@ -57,9 +56,9 @@ class MultiRobotSimulator:
 
         # Frames generieren
         frames = []
-        ziel_erreicht = False
-        t = 0
-        while True:
+        for t in range(self.max_len):
+
+
 
             frame_data = [
                 go.Scatter(x=edge_x, y=edge_y, mode='lines',
@@ -73,6 +72,9 @@ class MultiRobotSimulator:
 
                 if r.current == r.target:
                     node = r.current
+
+                    print(f"Am Ziel: {node}")
+                    print(self.graph[node])
 
                     kinder = {k: v for k, v in self.graph[node].items() if v != 'r'}
                     if len(kinder) != 0:
@@ -93,8 +95,6 @@ class MultiRobotSimulator:
                             r.target = eltern
                             self.graph[eltern][r.current] = 'r'
                             color_node[node] = 'red'
-                        else:
-                            ziel_erreicht = True
                 else:
                     ziel_x, ziel_y = node_x[r.target], node_y[r.target]
                     r.x += (node_x[r.target]- node_x[r.current]) /steps_robot
@@ -105,21 +105,23 @@ class MultiRobotSimulator:
                         r.y = ziel_y
                         r.current = r.target
 
+
+
                 frame_data.append(go.Scatter(x=[r.x], y=[r.y], mode='markers+text',
                                              marker=dict(size=30, color=r.color),
                                              text=[r.name], textposition="top center"))
 
+
+
+
             frames.append(go.Frame(data=frame_data, name=f"f{t}"))
-            t += 1
-            if ziel_erreicht:
-                break
 
         # Slider
         steps = [{
             "label": f"{i}",
             "method": "animate",
             "args": [[f"f{i}"], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate"}]
-        } for i in range(t)]
+        } for i in range(self.max_len)]
 
         fig.update_layout(
             title="Mehrere Roboter im Baum",
