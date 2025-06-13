@@ -7,6 +7,7 @@ class Gruppe:
         self.role = 'Head'
         self.anzahl = len(roboter)
         self.color = 'white'
+        #self.color = "rgba(0, 0, 0, 0)"
 
         self.current = start
         self.target = start
