@@ -72,7 +72,7 @@ class MultiRobotSimulator:
                            marker=dict(size=20, color=color_node),
                            text=node_text, textposition="top center")
             ]
-
+            print()
 
             # Die Gruppen werden angepasst
             grupp_akt1 = []
@@ -84,22 +84,19 @@ class MultiRobotSimulator:
                     grupp_akt1.append(gruppen[0])
                 else:
                     gruppe = Gruppe([],gruppen[0].current, gruppen[0].x, gruppen[0].y)
+
                     for g in gruppen:
-
-                        kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
-
-
-
 
                         gruppe.roboter += g.roboter
                         gruppe.anzahl = len(gruppe.roboter)
 
                     grupp_akt1.append(gruppe)
-                #print(f"Position {key}: {len(gruppen)} Gruppen; Gesamtanzahl Roboter: {gesamtanzahl}")
-            #print("Step: ", t)
+                gesamtanzahl = sum(g.anzahl for g in gruppen)
+                print(f"Position {key}: {len(gruppen)} Gruppen; Gesamtanzahl Roboter: {gesamtanzahl}")
+            print("Step: ", t)
             self.gruppen = grupp_akt1
 
-            # Ampel
+            """# Ampel
             grupp_akt2 = []
             for g in self.gruppen:
                 kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
@@ -121,6 +118,7 @@ class MultiRobotSimulator:
                                 g.role = 'Ampel'
                                 g.target = g.current
                                 grupp_akt2.append(g)
+
                         else:
                             grupp_akt2.append(g)
                     else:
@@ -132,7 +130,7 @@ class MultiRobotSimulator:
                 else:
                     grupp_akt2.append(g)
 
-            self.gruppen = grupp_akt2
+            self.gruppen = grupp_akt2"""
 
 
             grupp_akt = []
@@ -144,14 +142,16 @@ class MultiRobotSimulator:
                     # Robot an der Kreuzung
                     if g.current == g.target:
                         kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
+                        color_node[g.current] = 'yellow'
 
-
-
-
+                        if g.current != 0:
+                            eltern = self.getEltern(g.current)
+                            g.target = eltern
+                            self.graph[eltern][g.current] = 'y'
 
                         # Es gibt noch Pfade
                         if len(kinder) != 0:
-                            color_node[g.current] = 'yellow'
+
 
                             # Es gibt nur ein Pfad
                             if len(kinder) == 1:
@@ -161,10 +161,10 @@ class MultiRobotSimulator:
                             # Es gibt mehrere Pfade
                             else:
                                 kinder_g = [k for k, v in kinder.items() if v == 'g']
+                                kinder_y = [k for k, v in kinder.items() if v == 'y']
 
                                 # Es gibt grüne Pfade
                                 if len(kinder_g) != 0:
-
                                     anzahlG = len(kinder_g)
 
                                     # Es gibt 3 Pfade, aber 2 Roboter
@@ -210,8 +210,6 @@ class MultiRobotSimulator:
 
                                 # Es gibt nur gelbe Pfade
                                 else:
-
-                                    kinder_y = [k for k, v in kinder.items() if v == 'y']
                                     anzahlG = len(kinder_y)
 
                                     # Es 3 Pfade, aber 2 Roboter
