@@ -18,3 +18,6 @@ class Gruppe:
 
     def getName(self):
         return self.head.name
+
+    def print(self):
+        print(self.head.name, ": ANzahl=", self.anzahl)

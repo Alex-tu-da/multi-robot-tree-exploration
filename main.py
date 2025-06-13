@@ -29,16 +29,16 @@ ziel = 18
 baum.setze_farbe(ziel, 'blue')
 
 roboter = [
-    Robot(name="i", baum=baum, start=0, ziel=ziel),
-    Robot(name="ii", baum=baum, start=0, ziel=ziel),
-    Robot(name="iii", baum=baum, start=0, ziel=ziel),
-    Robot(name="iv", baum=baum, start=0, ziel=ziel),
-    Robot(name="v", baum=baum, start=0, ziel=ziel),
-    Robot(name="vi", baum=baum, start=0, ziel=ziel),
-    Robot(name="vii", baum=baum, start=0, ziel=ziel),
-    Robot(name="viii", baum=baum, start=0, ziel=ziel),
-    Robot(name="ix", baum=baum, start=0, ziel=ziel),
-    Robot(name="x", baum=baum, start=0, ziel=ziel)
+    Robot(name="i"),
+    Robot(name="ii"),
+    Robot(name="iii"),
+    Robot(name="iv"),
+    Robot(name="v"),
+    Robot(name="vi"),
+    Robot(name="vii"),
+    Robot(name="viii"),
+    Robot(name="ix"),
+    Robot(name="x")
 ]
 
 gruppe = Gruppe(roboter, start=0, x=0, y=0)
