@@ -63,7 +63,7 @@ class MultiRobotSimulator:
         ziel_erreicht = False
         t = 0
         #while len(self.gruppen) != 0:
-        for i in range(250):
+        for i in range(170):
 
             frame_data = [
                 go.Scatter(x=edge_x, y=edge_y, mode='lines',
@@ -73,27 +73,67 @@ class MultiRobotSimulator:
                            text=node_text, textposition="top center")
             ]
 
+
+            # Die Gruppen werden angepasst
+            grupp_akt1 = []
             gruppen_map = defaultdict(list)
             for g in self.gruppen:
                 gruppen_map[(g.current, g.target)].append(g)
-                g.print()
-
-            neue_gruppen = []
-            for (pos, ziel), gruppen in gruppen_map.items():
+            for key, gruppen in gruppen_map.items():
                 if len(gruppen) == 1:
-                    neue_gruppen.append(gruppen[0])
-                    continue
+                    grupp_akt1.append(gruppen[0])
+                else:
+                    gruppe = Gruppe([],gruppen[0].current, gruppen[0].x, gruppen[0].y)
+                    for g in gruppen:
 
-                # Eine neue gemeinsame Gruppe erstellen
-                alle_roboter = []
-                for g in gruppen:
-                    alle_roboter += g.roboter
+                        kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
 
-                head = gruppen[0]  # nimm erste Gruppe als Basis
-                head.roboter = alle_roboter
-                head.anzahl = len(alle_roboter)
-                head.role = 'Head'  # ggf. setzen
-                neue_gruppen.append(head)
+
+
+
+                        gruppe.roboter += g.roboter
+                        gruppe.anzahl = len(gruppe.roboter)
+
+                    grupp_akt1.append(gruppe)
+                #print(f"Position {key}: {len(gruppen)} Gruppen; Gesamtanzahl Roboter: {gesamtanzahl}")
+            #print("Step: ", t)
+            self.gruppen = grupp_akt1
+
+            # Ampel
+            grupp_akt2 = []
+            for g in self.gruppen:
+                kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
+
+                if g.current != 0:
+
+                    if len(kinder) > 0:
+                        if color_node[g.current] == 'green':
+                            if g.anzahl > 1:
+                                ampel = g.roboter[-1]
+                                g.roboter.remove(ampel)
+                                ampel_gruppe = Gruppe([ampel], g.current, g.x, g.y)
+                                ampel_gruppe.role = 'Ampel'
+                                ampel_gruppe.current = g.current
+                                ampel_gruppe.target = g.current
+                                grupp_akt2.append(ampel_gruppe)
+                                grupp_akt2.append(g)
+                            else:
+                                g.role = 'Ampel'
+                                g.target = g.current
+                                grupp_akt2.append(g)
+                        else:
+                            grupp_akt2.append(g)
+                    else:
+
+                        grupp_akt2.append(g)
+
+
+
+                else:
+                    grupp_akt2.append(g)
+
+            self.gruppen = grupp_akt2
+
 
             grupp_akt = []
             for g in self.gruppen:
@@ -105,23 +145,7 @@ class MultiRobotSimulator:
                     if g.current == g.target:
                         kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
 
-                        if color_node[g.current] == 'green' and len(kinder) > 0 and g.current != 0:
 
-                            if g.anzahl > 1:
-                                ampel = g.roboter[-1]  # Oder g.roboter[-1]
-                                g.roboter.remove(ampel)
-
-                                # Neue Gruppe für die Ampel erzeugen
-
-                                ampel_gruppe = Gruppe([ampel], g.current, g.x, g.y)
-                                ampel_gruppe.role = 'Ampel'
-                                ampel_gruppe.current = g.current
-                                ampel_gruppe.target = g.current
-                                grupp_akt.append(ampel_gruppe)
-                            else:
-                                g.role = 'Ampel'
-                                g.target = g.current
-                                grupp_akt.append(g)
 
 
 
@@ -308,4 +332,4 @@ class MultiRobotSimulator:
 
         )
         fig.frames = frames
-        #fig.show()
+        fig.show()
