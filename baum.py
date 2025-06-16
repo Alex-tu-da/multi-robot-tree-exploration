@@ -1,12 +1,9 @@
-
-
 class Baum:
     def __init__(self):
         self.knoten = set()
         self.kanten = {}  # Eltern -> [Kinder]
         self.pos = {}         # Knotennummer -> (x, y)
         self.knoten_farben = {}
-
 
     def setze_farbe(self, knoten, farbe):
         self.knoten_farben[knoten] = farbe
@@ -49,13 +46,9 @@ class Baum:
             n = len(kinder)
             for i, kind in enumerate(kinder):
                 offset = (i - (n - 1) / 2) * dx
-                dfs(kind, x + offset, y - 1, dx / 2)
+                dfs(kind, x + offset, y - 1, dx * 0.3)
 
         # Wurzel finden
         kinder = {k for l in self.kanten.values() for k in l}
         wurzel = (self.knoten - kinder).pop()
-        dfs(wurzel, 0, 0, 4)
-
-
-
-
+        dfs(wurzel, 0, 0, 1)

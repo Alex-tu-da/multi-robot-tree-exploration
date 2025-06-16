@@ -5,6 +5,7 @@ from gruppe import Gruppe
 from robot import Robot
 from statistic import Statistic
 
+# Höhe 3
 baum3 ={
     0: [1],               # Wurzel hat nur ein Kind
 
@@ -14,7 +15,7 @@ baum3 ={
     3: [8, 9, 10],
     4: [11, 12, 13],
 }
-
+# Höhe 4
 baum4 = {
     0: [1],               # Höhe 0 (Wurzel)
 
@@ -33,6 +34,56 @@ baum4 = {
     11: [32, 33, 34],
     12: [35, 36, 37],
     13: [38, 39, 40],
+}
+# Höhe 5
+baum5 = {
+    0: [1],               # Höhe 0 (Wurzel)
+
+    1: [2, 3, 4],         # Höhe 1
+
+    2: [5, 6, 7],         # Höhe 2
+    3: [8, 9, 10],
+    4: [11, 12, 13],
+
+    5: [14, 15, 16],      # Höhe 3
+    6: [17, 18, 19],
+    7: [20, 21, 22],
+    8: [23, 24, 25],
+    9: [26, 27, 28],
+    10: [29, 30, 31],
+    11: [32, 33, 34],
+    12: [35, 36, 37],
+    13: [38, 39, 40],
+
+    14: [41, 42, 43],     # Höhe 4
+    15: [44, 45, 46],
+    16: [47, 48, 49],
+    17: [50, 51, 52],
+    18: [53, 54, 55],
+    19: [56, 57, 58],
+    20: [59, 60, 61],
+    21: [62, 63, 64],
+    22: [65, 66, 67],
+    23: [68, 69, 70],
+    24: [71, 72, 73],
+    25: [74, 75, 76],
+    26: [77, 78, 79],
+    27: [80, 81, 82],
+    28: [83, 84, 85],
+    29: [86, 87, 88],
+    30: [89, 90, 91],
+    31: [92, 93, 94],
+    32: [95, 96, 97],
+    33: [98, 99, 100],
+    34: [101, 102, 103],
+    35: [104, 105, 106],
+    36: [107, 108, 109],
+    37: [110, 111, 112],
+    38: [113, 114, 115],
+    39: [116, 117, 118],
+    40: [119, 120, 121],
+
+    # Höhe 5 Blätter (keine Kinder mehr)
 }
 
 kanten0 = {
@@ -64,8 +115,7 @@ kanten1 = {
     18: [26, 27],
     20: [28],
     25: [29, 30],
-    27: [31],
-    31: [32, 33],
+    27: [31]
 }
 
 kanten2 = {
@@ -116,41 +166,44 @@ kanten2 = {
     65: [72, 73]
 }
 
-def simulation (statistic_f, anzahl, ziel, kanten, anzahl_sim):
-
-
-    roboter = [Robot(name="i")]
-    for i in range(anzahl-1):
-        roboter.append(roboter[0])
+def simulation (statistic_f, anzahl_sim, stat_rob, anzahl_rob, ziel, kanten, max_time, obPrint, durchfällePrint):
 
     if statistic_f:
-        statistic = Statistic()
-        for i in range(0, 10):
-            roboter += roboter
-            print(f"Anzahl Roboter: {len(roboter)}")
-            for i in range(anzahl_sim):
+        for i in range(stat_rob):
+            statistic = Statistic(max_time, anzahl_sim)
+            for j in range(anzahl_sim):
+
+                roboter = [Robot(name=f"R{i}") for i in range(anzahl_rob + i)]
+
+                # Baum darstellen
                 baum = Baum()
                 for eltern, kinder in kanten.items():
                     for kind in kinder:
                         baum.füge_kante_hinzu(eltern, kind)
                 baum.setze_farbe(ziel, 'blue')
+
                 gruppe = Gruppe(roboter, start=0, x=0, y=0)
-                sim = MultiRobotSimulator(baum, gruppe, ziel, statistic)
+                sim = MultiRobotSimulator(baum, gruppe, ziel, statistic, max_time, obPrint, durchfällePrint)
                 sim.animate(steps_robot=10, anzahl_sim=anzahl_sim)
+
+                if j == anzahl_sim - 1:
+                    print()
+                    print(f"Anzahl Roboter: {len(roboter) + 1}")
+
             statistic.print_statistic()
     else:
+
         for i in range(anzahl_sim):
+            roboter = [Robot(name=f"R{i}") for i in range(anzahl_rob)]
+            # Baum darstellen
             baum = Baum()
             for eltern, kinder in kanten.items():
                 for kind in kinder:
                     baum.füge_kante_hinzu(eltern, kind)
             baum.setze_farbe(ziel, 'blue')
+
             gruppe = Gruppe(roboter, start=0, x=0, y=0)
-            sim = MultiRobotSimulator(baum, gruppe, ziel, None)
+            sim = MultiRobotSimulator(baum, gruppe, ziel, None, max_time, obPrint, durchfällePrint)
             sim.animate(steps_robot=10, anzahl_sim=anzahl_sim)
 
-
-
-
-simulation(False, 21, 68, kanten2, 1)
-
+simulation(False, 1,10, 49, 71, kanten2, 1000, False, True)

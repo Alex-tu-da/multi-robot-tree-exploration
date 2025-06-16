@@ -4,9 +4,8 @@ import plotly.graph_objects as go
 from gruppe import Gruppe
 from collections import defaultdict
 
-
 class MultiRobotSimulator:
-    def __init__(self, baum, gruppe, ziel, statistic):
+    def __init__(self, baum, gruppe, ziel, statistic, max_steps, obPrint, durchfällePrint):
         self.baum = baum
         self.baum._berechne_positionen()
         self.gruppen = []
@@ -14,6 +13,9 @@ class MultiRobotSimulator:
         self.graph = baum.kanten
         self.ziel = ziel
 
+        self.max_steps = max_steps
+        self.obPrint = obPrint
+        self.durchfällePrint = durchfällePrint
         self.statistic = statistic
 
 
@@ -25,7 +27,6 @@ class MultiRobotSimulator:
         return None  # steht außerhalb der Schleife
 
     def animate(self, steps_robot, anzahl_sim):
-
         edge_x, edge_y = [], []
         for eltern, kinder in self.baum.kanten.items():
             for kind in kinder:
@@ -55,15 +56,13 @@ class MultiRobotSimulator:
                                      marker=dict(size=30, color=g.getColor()),
                                      text=[g.anzahl], textposition="middle center"))
 
-
         # Frames generieren
         frames = []
         t = -1
         color_node[0] = 'black'
         while len(self.gruppen) != 0:
-        #for i in range(400):
 
-            if anzahl_sim == 1:
+            if anzahl_sim == 1 and self.obPrint:
                 print("Step: ", t)
 
             frame_data = [
@@ -74,36 +73,24 @@ class MultiRobotSimulator:
                            text=node_text, textposition="top center")
             ]
 
-            # Die Gruppen werden angepasst
+            # Die Gruppen werden an der Knote angepasst
             grupp_akt1 = []
             gruppen_map = defaultdict(list)
             for g in self.gruppen:
                 gruppen_map[(g.current, g.target)].append(g)
             for key, gruppen in gruppen_map.items():
-
-
                 if len(gruppen) == 1:
-
-
-
                     grupp_akt1.append(gruppen[0])
-
-
                 else:
                     gruppe = Gruppe([],gruppen[0].current, gruppen[0].x, gruppen[0].y)
-
                     WHead_nr = False
                     for g in gruppen:
                         if g.role == 'WHead':
                             WHead_nr = True
-
                     for g in gruppen:
                         kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
-
                         if WHead_nr and g.role == 'Ampel':
                             g.role = 'WAmpel'
-
-
                         if len(kinder) == 1 and g.role == 'WAmpel':
                             gruppe.roboter += g.roboter
                             gruppe.anzahl = len(gruppe.roboter)
@@ -117,51 +104,38 @@ class MultiRobotSimulator:
                         else:
                             gruppe.roboter += g.roboter
                             gruppe.anzahl = len(gruppe.roboter)
-
                     grupp_akt1.append(gruppe)
             self.gruppen = grupp_akt1
 
-
-
-            #Die Gruppen werden verteilt
+            #Die Gruppen werden an der Knote verteilt
             grupp_akt = []
             for g in self.gruppen:
                 if g.role == 'Head':
                     # Robot an der Kreuzung
                     if g.current == g.target:
                         kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
-
-
                         if g.current != 0 and color_node[g.current] == 'green' :
                             color_node[g.current] = 'yellow'
                             eltern = self.getEltern(g.current)
                             self.graph[eltern][g.current] = 'y'
-
                             if len(kinder) > 0:
                                 if g.anzahl > 1:
                                     ampel = g.roboter[-1]
                                     g.roboter.remove(ampel)
                                     g.anzahl -= 1
-
                                     ampel_gruppe = Gruppe([ampel], g.current, g.x, g.y)
-
                                     if g.current == 1:
                                         ampel_gruppe.role = 'WAmpel'
                                     else:
                                         ampel_gruppe.role = 'Ampel'
-
                                     ampel_gruppe.current = g.current
                                     ampel_gruppe.target = g.current
-
                                     grupp_akt.append(ampel_gruppe)
                                 else:
                                     g.role = 'Ampel'
                                     g.target = g.current
                                     grupp_akt.append(g)
                                     continue
-
-
-
                         # Es gibt noch Pfade
                         if len(kinder) != 0:
                             # Es gibt nur ein Pfad
@@ -178,10 +152,8 @@ class MultiRobotSimulator:
                                     # Es gibt 3 Pfade, aber 2 Roboter
                                     if anzahlG == 3 and len(g.roboter) == 2:
                                         new_gruppen = [[] for _ in range(len(g.roboter))]
-
                                         for i, elem in enumerate(g.roboter):
                                             new_gruppen[i % anzahlG].append(elem)
-
                                         # Für jede neue Gruppe ein eigenes Ziel zuweisen
                                         for i in range(len(new_gruppen)):
                                             zufall = random.choice(kinder_g)
@@ -191,25 +163,19 @@ class MultiRobotSimulator:
                                             grupp_akt.append(group)
                                     # Es gibt nur ein Robot
                                     elif len(g.roboter) == 1:
-
                                         zufall = random.choice(kinder_g)
                                         kinder_g.remove(zufall)
-
                                         g.target = zufall
                                         grupp_akt.append(g)
                                     # Normale Verteilung
                                     else:
-
                                         new_gruppen = [[] for _ in range(anzahlG)]
-
                                         for i, elem in enumerate(g.roboter):
                                             new_gruppen[i % anzahlG].append(elem)
-
                                         # Für jede neue Gruppe ein eigenes Ziel zuweisen
                                         for i in range(anzahlG):
                                             zufall = random.choice(kinder_g)
                                             kinder_g.remove(zufall)
-
                                             group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
                                             group.target = zufall
                                             grupp_akt.append(group)
@@ -219,10 +185,8 @@ class MultiRobotSimulator:
                                     # Es 3 Pfade, aber 2 Roboter
                                     if anzahlG == 3 and len(g.roboter) == 2:
                                         new_gruppen = [[] for _ in range(len(g.roboter))]
-
                                         for i, elem in enumerate(g.roboter):
                                             new_gruppen[i % anzahlG].append(elem)
-
                                         # Für jede neue Gruppe ein eigenes Ziel zuweisen
                                         for i in range(len(new_gruppen)):
                                             zufall = random.choice(kinder_y)
@@ -232,25 +196,19 @@ class MultiRobotSimulator:
                                             grupp_akt.append(group)
                                     # Es gibt nur ein Robot
                                     elif len(g.roboter) == 1:
-
                                         zufall = random.choice(kinder_y)
                                         kinder_y.remove(zufall)
-
                                         g.target = zufall
                                         grupp_akt.append(g)
                                     # Normale Verteilung
                                     else:
-
                                         new_gruppen = [[] for _ in range(anzahlG)]
-
                                         for i, elem in enumerate(g.roboter):
                                             new_gruppen[i % anzahlG].append(elem)
-
                                         # Für jede neue Gruppe ein eigenes Ziel zuweisen
                                         for i in range(anzahlG):
                                             zufall = random.choice(kinder_y)
                                             kinder_y.remove(zufall)
-
                                             group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
                                             group.target = zufall
                                             grupp_akt.append(group)
@@ -273,29 +231,27 @@ class MultiRobotSimulator:
                             g.y = ziel_y
                             g.current = g.target
                         grupp_akt.append(g)
-
                 elif g.role == 'WHead':
-
-                    if g.current != self.ziel:
-
+                    if g.current == g.target and g.current != self.ziel:
                         kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
                         Wkinder = [k for k, v in kinder.items()]
                         g.target = Wkinder[0]
-
-                        ziel_x, ziel_y = node_x[g.target], node_y[g.target]
-                        g.x += (node_x[g.target] - node_x[g.current]) / steps_robot
-                        g.y += (node_y[g.target] - node_y[g.current]) / steps_robot
-                        if math.isclose(g.x, ziel_x, abs_tol=0.01) and math.isclose(g.y, ziel_y, abs_tol=0.01):
-                            g.x = ziel_x
-                            g.y = ziel_y
-                            g.current = g.target
                         grupp_akt.append(g)
-
+                    else:
+                        if g.current != self.ziel:
+                            ziel_x, ziel_y = node_x[g.target], node_y[g.target]
+                            g.x += (node_x[g.target] - node_x[g.current]) / steps_robot
+                            g.y += (node_y[g.target] - node_y[g.current]) / steps_robot
+                            if math.isclose(g.x, ziel_x, abs_tol=0.01) and math.isclose(g.y, ziel_y, abs_tol=0.01):
+                                g.x = ziel_x
+                                g.y = ziel_y
+                                g.current = g.target
+                            grupp_akt.append(g)
                 else:
                     grupp_akt.append(g)
 
-
-            if anzahl_sim == 1:
+            # Print alle Gruppen
+            if anzahl_sim == 1 and self.obPrint:
                 gruppen_mapP = defaultdict(list)
                 for g in self.gruppen:
                     gruppen_mapP[(g.current, g.target)].append(g)
@@ -309,7 +265,6 @@ class MultiRobotSimulator:
                         else:
                             print(f"Position {key} (in Bewegung): {len(gruppen)} Gruppen; "
                                   f"Gesamtanzahl Roboter: {gesamtanzahl}; Rollen: {rollen}")
-
                 print()
 
             # Plot die Gruppen
@@ -331,9 +286,15 @@ class MultiRobotSimulator:
             frames.append(go.Frame(data=frame_data, name=f"f{t}"))
             t += 1
 
-        if anzahl_sim == 1:
+            if t > self.max_steps:
+                if self.statistic == None:
+                    print("Die maximale Zeit wurde überschritten!!!")
+                break
+
+        if anzahl_sim == 1 and self.obPrint:
             print("Steps: ",t)
-        self.statistic.add(t)
+        if self.statistic != None:
+            self.statistic.add(t-1)
 
         # Slider
         steps = [{
@@ -362,5 +323,10 @@ class MultiRobotSimulator:
 
         )
         fig.frames = frames
+
+        if t > self.max_steps:
+            if self.statistic != None and self.durchfällePrint == True:
+                fig.show()
+
         if anzahl_sim == 1:
             fig.show()
