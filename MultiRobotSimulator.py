@@ -56,16 +56,15 @@ class MultiRobotSimulator:
                                      text=[g.anzahl], textposition="middle center"))
 
 
-
         # Frames generieren
         frames = []
-        t = 0
+        t = -1
         color_node[0] = 'black'
         while len(self.gruppen) != 0:
-        #for i in range(50):
+        #for i in range(400):
 
             if anzahl_sim == 1:
-                print("Step: ", t-1)
+                print("Step: ", t)
 
             frame_data = [
                 go.Scatter(x=edge_x, y=edge_y, mode='lines',
@@ -81,47 +80,50 @@ class MultiRobotSimulator:
             for g in self.gruppen:
                 gruppen_map[(g.current, g.target)].append(g)
             for key, gruppen in gruppen_map.items():
+
+
                 if len(gruppen) == 1:
+
+
+
                     grupp_akt1.append(gruppen[0])
+
+
                 else:
                     gruppe = Gruppe([],gruppen[0].current, gruppen[0].x, gruppen[0].y)
+
+                    WHead_nr = False
                     for g in gruppen:
-                        gruppe.roboter += g.roboter
-                        gruppe.anzahl = len(gruppe.roboter)
+                        if g.role == 'WHead':
+                            WHead_nr = True
+
+                    for g in gruppen:
+                        kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
+
+                        if WHead_nr and g.role == 'Ampel':
+                            g.role = 'WAmpel'
+
+
+                        if len(kinder) == 1 and g.role == 'WAmpel':
+                            gruppe.roboter += g.roboter
+                            gruppe.anzahl = len(gruppe.roboter)
+                            gruppe.role = 'WHead'
+                        elif len(kinder) > 0:
+                            if g.role == 'Ampel' or g.role == 'WAmpel':
+                                grupp_akt1.append(g)
+                            else:
+                                gruppe.roboter += g.roboter
+                                gruppe.anzahl = len(gruppe.roboter)
+                        else:
+                            gruppe.roboter += g.roboter
+                            gruppe.anzahl = len(gruppe.roboter)
+
                     grupp_akt1.append(gruppe)
             self.gruppen = grupp_akt1
 
-            """# Ampel
-            grupp_akt2 = []
-            for g in self.gruppen:
-                kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
-                if g.current != 0:
-                    if len(kinder) > 0:
-                        if color_node[g.current] == 'green':
-                            if g.anzahl > 1:
-                                ampel = g.roboter[-1]
-                                g.roboter.remove(ampel)
-                                g.anzahl = len(g.roboter)
-                                ampel_gruppe = Gruppe([ampel], g.current, g.x, g.y)
-                                ampel_gruppe.role = 'Ampel'
-                                ampel_gruppe.current = g.current
-                                ampel_gruppe.target = g.current
-                                grupp_akt2.append(ampel_gruppe)
-                                grupp_akt2.append(g)
-                            else:
-                                g.role = 'Ampel'
-                                g.target = g.current
-                                grupp_akt2.append(g)
-                        else:
-                            g.role = 'Head'
-                            grupp_akt2.append(g)
-                    else:
-                        grupp_akt2.append(g)
-                else:
-                    grupp_akt2.append(g)
-            self.gruppen = grupp_akt2"""
 
 
+            #Die Gruppen werden verteilt
             grupp_akt = []
             for g in self.gruppen:
                 if g.role == 'Head':
@@ -129,10 +131,36 @@ class MultiRobotSimulator:
                     if g.current == g.target:
                         kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
 
-                        if g.current != 0:
+
+                        if g.current != 0 and color_node[g.current] == 'green' :
                             color_node[g.current] = 'yellow'
                             eltern = self.getEltern(g.current)
                             self.graph[eltern][g.current] = 'y'
+
+                            if len(kinder) > 0:
+                                if g.anzahl > 1:
+                                    ampel = g.roboter[-1]
+                                    g.roboter.remove(ampel)
+                                    g.anzahl -= 1
+
+                                    ampel_gruppe = Gruppe([ampel], g.current, g.x, g.y)
+
+                                    if g.current == 1:
+                                        ampel_gruppe.role = 'WAmpel'
+                                    else:
+                                        ampel_gruppe.role = 'Ampel'
+
+                                    ampel_gruppe.current = g.current
+                                    ampel_gruppe.target = g.current
+
+                                    grupp_akt.append(ampel_gruppe)
+                                else:
+                                    g.role = 'Ampel'
+                                    g.target = g.current
+                                    grupp_akt.append(g)
+                                    continue
+
+
 
                         # Es gibt noch Pfade
                         if len(kinder) != 0:
@@ -245,8 +273,27 @@ class MultiRobotSimulator:
                             g.y = ziel_y
                             g.current = g.target
                         grupp_akt.append(g)
+
+                elif g.role == 'WHead':
+
+                    if g.current != self.ziel:
+
+                        kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
+                        Wkinder = [k for k, v in kinder.items()]
+                        g.target = Wkinder[0]
+
+                        ziel_x, ziel_y = node_x[g.target], node_y[g.target]
+                        g.x += (node_x[g.target] - node_x[g.current]) / steps_robot
+                        g.y += (node_y[g.target] - node_y[g.current]) / steps_robot
+                        if math.isclose(g.x, ziel_x, abs_tol=0.01) and math.isclose(g.y, ziel_y, abs_tol=0.01):
+                            g.x = ziel_x
+                            g.y = ziel_y
+                            g.current = g.target
+                        grupp_akt.append(g)
+
                 else:
                     grupp_akt.append(g)
+
 
             if anzahl_sim == 1:
                 gruppen_mapP = defaultdict(list)
@@ -262,7 +309,7 @@ class MultiRobotSimulator:
                         else:
                             print(f"Position {key} (in Bewegung): {len(gruppen)} Gruppen; "
                                   f"Gesamtanzahl Roboter: {gesamtanzahl}; Rollen: {rollen}")
-                print(self.graph)
+
                 print()
 
             # Plot die Gruppen
@@ -283,6 +330,7 @@ class MultiRobotSimulator:
             color_node[self.ziel] = 'blue'
             frames.append(go.Frame(data=frame_data, name=f"f{t}"))
             t += 1
+
         if anzahl_sim == 1:
             print("Steps: ",t)
         self.statistic.add(t)

@@ -2,8 +2,8 @@
 class Gruppe:
     def __init__(self, roboter, start, x, y):
 
+
         self.roboter = roboter
-        self.head = roboter[0] if roboter else None
         self.role = 'Head'
         self.anzahl = len(roboter)
         self.color = 'white'
@@ -14,13 +14,13 @@ class Gruppe:
         self.x = x
         self.y = y
 
+        self.links = -1
+        self.mitte = -1
+        self.rechts = -1
+
+    def setRoleAmpel(self):
+        self.role = 'Ampel'
 
 
     def getColor(self):
         return self.color
-
-    def getName(self):
-        return self.head.name
-
-    def print(self):
-        print(self.head.name, ": Anzahl=", self.anzahl)

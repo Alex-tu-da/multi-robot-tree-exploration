@@ -5,6 +5,21 @@ from gruppe import Gruppe
 from robot import Robot
 from statistic import Statistic
 
+kanten0 = {
+    0: [1],
+    1: [2, 3, 4],
+    2: [5, 6, 7],
+    5: [8,9],
+    6: [10],
+    7: [11,12],
+    8: [13,14],
+    9: [15],
+    11: [16,17,18],
+    12: [19],
+    14: [20,21],
+
+}
+
 kanten1 = {
     0: [1],
     1: [2, 3, 4],
@@ -12,25 +27,16 @@ kanten1 = {
     3: [8, 9],
     4: [10, 11],
     5: [12, 13],
-    6: [28],
     7: [14, 15],
-    8: [29],
-    9: [30, 31],
-    10: [32],
     11: [16, 17],
-    12: [24, 25],
-    13: [33],
     14: [18, 19, 20],
-    15: [34],
     16: [21, 22, 23],
-    17: [26, 27],
-    18: [35, 36],
-    20: [37],
-    22: [38],
-    25: [39, 40],
-    27: [41],
-    31: [42, 43],
-    36: [44, 45]
+    17: [24, 25],
+    18: [26, 27],
+    20: [28],
+    25: [29, 30],
+    27: [31],
+    31: [32, 33],
 }
 
 kanten2 = {
@@ -81,9 +87,9 @@ kanten2 = {
     65: [72, 73]
 }
 
+kanten = kanten1
 
-
-ziel = 71
+ziel = 21
 anzahl_sim = 1
 statistic_f = False
 statistic = Statistic()
@@ -91,6 +97,15 @@ statistic = Statistic()
 
 
 roboter = [
+    Robot(name="i"),
+    Robot(name="i"),
+    Robot(name="i"),
+    Robot(name="i"),
+    Robot(name="i"),
+    Robot(name="i"),
+    Robot(name="i"),
+    Robot(name="i"),
+    Robot(name="i"),
     Robot(name="i"),
     Robot(name="i"),
     Robot(name="i"),
@@ -105,7 +120,7 @@ if statistic_f:
         print(f"Anzahl Roboter: {len(roboter)}")
         for i in range(anzahl_sim):
             baum = Baum()
-            for eltern, kinder in kanten2.items():
+            for eltern, kinder in kanten.items():
                 for kind in kinder:
                     baum.füge_kante_hinzu(eltern, kind)
             baum.setze_farbe(ziel, 'blue')
@@ -116,7 +131,7 @@ if statistic_f:
 else:
     for i in range(anzahl_sim):
         baum = Baum()
-        for eltern, kinder in kanten2.items():
+        for eltern, kinder in kanten.items():
             for kind in kinder:
                 baum.füge_kante_hinzu(eltern, kind)
         baum.setze_farbe(ziel, 'blue')
