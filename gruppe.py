@@ -12,5 +12,10 @@ class Gruppe:
         self.x = x
         self.y = y
 
+        self.pfad = []
+
     def getColor(self):
         return self.color
+
+    def setColor(self, color):
+        self.color = color

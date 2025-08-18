@@ -3,13 +3,17 @@ import random
 import plotly.graph_objects as go
 from gruppe import Gruppe
 from collections import defaultdict
+from robot import Robot
+from zielRobot import zielRobot
+
 
 class MultiRobotSimulator:
     def __init__(self, baum, gruppe, ziel, statistic, max_steps, obPrint, durchfällePrint):
         self.baum = baum
         self.baum._berechne_positionen()
         self.gruppen = []
-        self.gruppen.append(gruppe)
+        if gruppe is not None:
+            self.gruppen.append(gruppe)
         self.graph = baum.kanten
         self.ziel = ziel
 
@@ -18,7 +22,6 @@ class MultiRobotSimulator:
         self.durchfällePrint = durchfällePrint
         self.statistic = statistic
 
-
     ### Graph Methoden ###
     def getEltern(self, node):
         for eltern, kinder in self.graph.items():
@@ -26,7 +29,17 @@ class MultiRobotSimulator:
                 return eltern
         return None  # steht außerhalb der Schleife
 
-    def animate(self, steps_robot, anzahl_sim):
+    ### Hilfsmethoden
+    def move(self, g, node_x, node_y, steps_robot):
+        ziel_x, ziel_y = node_x[g.target], node_y[g.target]
+        g.x += (node_x[g.target] - node_x[g.current]) / steps_robot
+        g.y += (node_y[g.target] - node_y[g.current]) / steps_robot
+        if math.isclose(g.x, ziel_x, abs_tol=0.01) and math.isclose(g.y, ziel_y, abs_tol=0.01):
+            g.x = ziel_x
+            g.y = ziel_y
+            g.current = g.target
+
+    def create_base_figure(self):
         edge_x, edge_y = [], []
         for eltern, kinder in self.baum.kanten.items():
             for kind in kinder:
@@ -42,29 +55,35 @@ class MultiRobotSimulator:
 
         fig = go.Figure()
 
-        # Statischer Hintergrund
-        fig.add_trace(go.Scatter(x=edge_x, y=edge_y, mode='lines',
-                                 line=dict(color='black', width=2),
-                                 hoverinfo='none'))
-        fig.add_trace(go.Scatter(x=node_x, y=node_y, mode='markers+text',
-                                 marker=dict(size=20, color=color_node),
-                                 text=node_text, textposition="top center"))
+        fig.add_trace(go.Scatter(
+            x=edge_x, y=edge_y, mode='lines',
+            line=dict(color='black', width=2),
+            hoverinfo='none'
+        ))
+        fig.add_trace(go.Scatter(
+            x=node_x, y=node_y, mode='markers+text',
+            marker=dict(size=20, color=color_node),
+            text=node_text, textposition="top center"
+        ))
+
+        return fig, edge_x, edge_y, node_x, node_y, color_node, node_text
+
+    ### Animation
+    def animate(self, steps_robot, anzahl_sim, statisches_ziel):
+        fig, edge_x, edge_y, node_x, node_y, color_node, node_text = self.create_base_figure()
+        color_node[0] = 'black'
+        frames = []
+
+        color_node[self.ziel] = 'blue'
 
         # Initiale Positionen der Roboter
         for g in self.gruppen:
             fig.add_trace(go.Scatter(x=[g.x], y=[g.y], mode='markers+text',
-                                     marker=dict(size=30, color=g.getColor()),
+                                     marker=dict(size=20, color=g.getColor()),
                                      text=[g.anzahl], textposition="middle center"))
 
-        # Frames generieren
-        frames = []
         t = -1
-        color_node[0] = 'black'
         while len(self.gruppen) != 0:
-
-            if anzahl_sim == 1 and self.obPrint:
-                print("Step: ", t)
-
             frame_data = [
                 go.Scatter(x=edge_x, y=edge_y, mode='lines',
                            line=dict(color='black', width=2)),
@@ -72,6 +91,9 @@ class MultiRobotSimulator:
                            marker=dict(size=20, color=color_node),
                            text=node_text, textposition="top center")
             ]
+
+            if anzahl_sim == 1 and self.obPrint:
+                print("Step: ", t)
 
             # Die Gruppen werden an der Knote angepasst
             grupp_akt1 = []
@@ -83,12 +105,10 @@ class MultiRobotSimulator:
                     grupp_akt1.append(gruppen[0])
                 else:
                     gruppe = Gruppe([],gruppen[0].current, gruppen[0].x, gruppen[0].y)
-                    WHead_nr = False
-                    for g in gruppen:
-                        if g.role == 'WHead':
-                            WHead_nr = True
+                    WHead_nr = any(g.role == 'WHead' for g in gruppen)
                     for g in gruppen:
                         kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
+
                         if WHead_nr and g.role == 'Ampel':
                             g.role = 'WAmpel'
                         if len(kinder) == 1 and g.role == 'WAmpel':
@@ -96,7 +116,7 @@ class MultiRobotSimulator:
                             gruppe.anzahl = len(gruppe.roboter)
                             gruppe.role = 'WHead'
                         elif len(kinder) > 0:
-                            if g.role == 'Ampel' or g.role == 'WAmpel':
+                            if g.role in ('Ampel', 'WAmpel'):
                                 grupp_akt1.append(g)
                             else:
                                 gruppe.roboter += g.roboter
@@ -104,6 +124,7 @@ class MultiRobotSimulator:
                         else:
                             gruppe.roboter += g.roboter
                             gruppe.anzahl = len(gruppe.roboter)
+
                     grupp_akt1.append(gruppe)
             self.gruppen = grupp_akt1
 
@@ -114,9 +135,10 @@ class MultiRobotSimulator:
                     # Robot an der Kreuzung
                     if g.current == g.target:
                         kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
+                        eltern = self.getEltern(g.current)
                         if g.current != 0 and color_node[g.current] == 'green' :
                             color_node[g.current] = 'yellow'
-                            eltern = self.getEltern(g.current)
+
                             self.graph[eltern][g.current] = 'y'
                             if len(kinder) > 0:
                                 if g.anzahl > 1:
@@ -216,20 +238,13 @@ class MultiRobotSimulator:
                         else:
                             # Kein Ziel -> zurück
                             if g.current != self.ziel:
-                                eltern = self.getEltern(g.current)
                                 g.target = eltern
                                 self.graph[eltern][g.current] = 'r'
                                 color_node[g.current] = 'red'
                                 grupp_akt.append(g)
                     # Robot im Rohr
                     else:
-                        ziel_x, ziel_y = node_x[g.target], node_y[g.target]
-                        g.x += (node_x[g.target]- node_x[g.current]) /steps_robot
-                        g.y += (node_y[g.target] - node_y[g.current]) /steps_robot
-                        if math.isclose(g.x, ziel_x, abs_tol=0.01) and math.isclose(g.y, ziel_y, abs_tol=0.01):
-                            g.x = ziel_x
-                            g.y = ziel_y
-                            g.current = g.target
+                        self.move(g,node_x, node_y, steps_robot)
                         grupp_akt.append(g)
                 elif g.role == 'WHead':
                     if g.current == g.target and g.current != self.ziel:
@@ -239,13 +254,7 @@ class MultiRobotSimulator:
                         grupp_akt.append(g)
                     else:
                         if g.current != self.ziel:
-                            ziel_x, ziel_y = node_x[g.target], node_y[g.target]
-                            g.x += (node_x[g.target] - node_x[g.current]) / steps_robot
-                            g.y += (node_y[g.target] - node_y[g.current]) / steps_robot
-                            if math.isclose(g.x, ziel_x, abs_tol=0.01) and math.isclose(g.y, ziel_y, abs_tol=0.01):
-                                g.x = ziel_x
-                                g.y = ziel_y
-                                g.current = g.target
+                            self.move(g,node_x, node_y, steps_robot)
                             grupp_akt.append(g)
                 else:
                     grupp_akt.append(g)
@@ -277,15 +286,12 @@ class MultiRobotSimulator:
                 anzahl.append(g.anzahl)
                 if g == grupp_akt[-1]:
                     frame_data.append(go.Scatter(x=x, y=y, mode='markers+text',
-                                             marker=dict(size=30, color=g.color),
+                                             marker=dict(size=20, color=g.color),
                                              text=anzahl, textposition="middle center"))
-
             self.gruppen = grupp_akt
 
-            color_node[self.ziel] = 'blue'
             frames.append(go.Frame(data=frame_data, name=f"f{t}"))
             t += 1
-
             if t > self.max_steps:
                 if self.statistic == None:
                     print("Die maximale Zeit wurde überschritten!!!")
@@ -327,6 +333,5 @@ class MultiRobotSimulator:
         if t > self.max_steps:
             if self.statistic != None and self.durchfällePrint == True:
                 fig.show()
-
-        if anzahl_sim == 1:
+        elif anzahl_sim == 1:
             fig.show()

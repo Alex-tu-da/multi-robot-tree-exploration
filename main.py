@@ -1,9 +1,23 @@
 import gruppe
 from MultiRobotSimulator import MultiRobotSimulator
 from baum import Baum
+from dynamischeSim import dynamischeSim
 from gruppe import Gruppe
 from robot import Robot
+from robot1 import Robot1
 from statistic import Statistic
+
+# Geraden
+gerade2 ={
+    0: [1],
+    1: [2],
+    2: [3]
+}
+gerate4={
+    0: [1],
+    1: [2],
+    2: [3]
+}
 
 # Höhe 3
 baum3 ={
@@ -81,9 +95,46 @@ baum5 = {
     37: [110, 111, 112],
     38: [113, 114, 115],
     39: [116, 117, 118],
-    40: [119, 120, 121],
+    40: [119, 120, 121]
 
     # Höhe 5 Blätter (keine Kinder mehr)
+}
+baum5_1 = {
+    0: [1],               # Höhe 0 (Wurzel)
+
+    1: [2, 3, 4],         # Höhe 1
+
+    2: [5, 6, 7],         # Höhe 2
+    3: [8, 9, 10],
+    4: [11, 12, 13],
+
+    5: [14, 15, 16],      # Höhe 3
+    6: [17, 18, 19],
+    7: [20, 21, 22],
+    9: [23, 24, 25],
+    10: [26, 27, 28],
+    12: [29, 30, 31],
+    13: [32, 33, 34],
+
+    14: [35, 36, 37],
+    15: [38, 39, 40],
+    16: [41, 42, 43],
+    17: [44, 45, 46],
+    18: [47, 48, 49],
+    19: [50, 51, 52],
+    20: [53, 54, 55],
+    21: [56, 57, 58],
+    22: [59, 60, 61],
+    23: [62, 63, 64],
+    24: [65, 66, 67],
+    25: [68, 69, 70],
+    26: [71, 72, 73],
+    27: [74, 75, 76],
+    28: [77, 78, 79],
+    29: [80, 81, 82],
+    30: [83, 84, 85],
+
+
 }
 
 kanten0 = {
@@ -166,8 +217,7 @@ kanten2 = {
     65: [72, 73]
 }
 
-def simulation (statistic_f, anzahl_sim, stat_rob, anzahl_rob, ziel, kanten, max_time, obPrint, durchfällePrint):
-
+def simulation (statistic_f, anzahl_sim, stat_rob, anzahl_rob, ziel, kanten, max_time, obPrint, durchfällePrint, statisches_ziel):
     if statistic_f:
         for i in range(stat_rob):
             statistic = Statistic(max_time, anzahl_sim)
@@ -192,18 +242,25 @@ def simulation (statistic_f, anzahl_sim, stat_rob, anzahl_rob, ziel, kanten, max
 
             statistic.print_statistic()
     else:
-
         for i in range(anzahl_sim):
-            roboter = [Robot(name=f"R{i}") for i in range(anzahl_rob)]
             # Baum darstellen
             baum = Baum()
             for eltern, kinder in kanten.items():
                 for kind in kinder:
                     baum.füge_kante_hinzu(eltern, kind)
-            baum.setze_farbe(ziel, 'blue')
 
+            roboter = [Robot(name=f"R{i}") for i in range(anzahl_rob)]
             gruppe = Gruppe(roboter, start=0, x=0, y=0)
-            sim = MultiRobotSimulator(baum, gruppe, ziel, None, max_time, obPrint, durchfällePrint)
-            sim.animate(steps_robot=10, anzahl_sim=anzahl_sim)
 
-simulation(False, 1,10, 49, 71, kanten2, 1000, False, True)
+            roboter1 = []
+            for i in range(anzahl_rob):
+                roboter1.append(Robot1([0,0]))
+
+            if statisches_ziel:
+                sim = MultiRobotSimulator(baum, gruppe, ziel, None, max_time, obPrint, durchfällePrint)
+            else:
+                sim = dynamischeSim(baum, roboter1, ziel, max_time, obPrint)
+
+            sim.animate(steps_robot=10, anzahl_sim=anzahl_sim, statisches_ziel=statisches_ziel)
+
+simulation(False, 1,10, 13, 42, baum5, 500, True, True, False)

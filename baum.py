@@ -46,9 +46,10 @@ class Baum:
             n = len(kinder)
             for i, kind in enumerate(kinder):
                 offset = (i - (n - 1) / 2) * dx
-                dfs(kind, x + offset, y - 1, dx * 0.3)
+                dfs(kind, x + offset, (y - 1), dx * 0.33)
 
         # Wurzel finden
         kinder = {k for l in self.kanten.values() for k in l}
         wurzel = (self.knoten - kinder).pop()
         dfs(wurzel, 0, 0, 1)
+
