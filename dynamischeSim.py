@@ -307,9 +307,9 @@ class dynamischeSim:
                 if kinder:
                     self.knote_color('y', eltern, g)
 
-                    kinder[0]
-
                 gruppen_akt.append(g)
+
+        return gruppen_akt
 
 
 

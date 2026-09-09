@@ -1,14 +1,19 @@
 import math
 import random
-import plotly.graph_objects as go
-from gruppe import Gruppe
 from collections import defaultdict
-from robot import Robot
-from zielRobot import zielRobot
+
+import plotly.graph_objects as go
+
+from gruppe import Gruppe
 
 
 class MultiRobotSimulator:
-    def __init__(self, baum, gruppe, ziel, statistic, max_steps, obPrint, durchfällePrint):
+    """Simuliert eine Gruppe von Robotern, die einen Baum-Graphen ausgehend von
+    der Wurzel erkundet, bis eine (Teil-)Gruppe den Zielknoten `ziel` erreicht
+    oder `max_steps` überschritten wird. Erzeugt am Ende eine Plotly-Animation.
+    """
+
+    def __init__(self, baum, gruppe, ziel, statistic, max_steps, obPrint, durchfaellePrint):
         self.baum = baum
         self.baum._berechne_positionen()
         self.gruppen = []
@@ -19,17 +24,17 @@ class MultiRobotSimulator:
 
         self.max_steps = max_steps
         self.obPrint = obPrint
-        self.durchfällePrint = durchfällePrint
+        self.durchfaellePrint = durchfaellePrint
         self.statistic = statistic
 
-    ### Graph Methoden ###
+    ### Graph-Methoden ###
     def getEltern(self, node):
         for eltern, kinder in self.graph.items():
             if node in kinder:
                 return eltern
         return None  # steht außerhalb der Schleife
 
-    ### Hilfsmethoden
+    ### Bewegung ###
     def move(self, g, node_x, node_y, steps_robot):
         ziel_x, ziel_y = node_x[g.target], node_y[g.target]
         g.x += (node_x[g.target] - node_x[g.current]) / steps_robot
@@ -39,6 +44,7 @@ class MultiRobotSimulator:
             g.y = ziel_y
             g.current = g.target
 
+    ### Plot-Aufbau ###
     def create_base_figure(self):
         edge_x, edge_y = [], []
         for eltern, kinder in self.baum.kanten.items():
@@ -68,246 +74,184 @@ class MultiRobotSimulator:
 
         return fig, edge_x, edge_y, node_x, node_y, color_node, node_text
 
-    ### Animation
-    def animate(self, steps_robot, anzahl_sim, statisches_ziel):
-        fig, edge_x, edge_y, node_x, node_y, color_node, node_text = self.create_base_figure()
-        color_node[0] = 'black'
-        frames = []
-
-        color_node[self.ziel] = 'blue'
-
-        # Initiale Positionen der Roboter
+    ### Gruppen-Logik ###
+    def _merge_groups_at_same_position(self):
+        """Fasst Gruppen zusammen, die sich auf derselben Kante (current -> target)
+        befinden. Wandelt eine zusammengefasste Gruppe in eine wartende
+        Kopf-Gruppe ('WHead') um, sobald an einer 'WAmpel' nur noch ein Pfad
+        übrig ist."""
+        gruppen_neu = []
+        gruppen_map = defaultdict(list)
         for g in self.gruppen:
-            fig.add_trace(go.Scatter(x=[g.x], y=[g.y], mode='markers+text',
-                                     marker=dict(size=20, color=g.getColor()),
-                                     text=[g.anzahl], textposition="middle center"))
+            gruppen_map[(g.current, g.target)].append(g)
 
-        t = -1
-        while len(self.gruppen) != 0:
-            frame_data = [
-                go.Scatter(x=edge_x, y=edge_y, mode='lines',
-                           line=dict(color='black', width=2)),
-                go.Scatter(x=node_x, y=node_y, mode='markers+text',
-                           marker=dict(size=20, color=color_node),
-                           text=node_text, textposition="top center")
-            ]
+        for gruppen in gruppen_map.values():
+            if len(gruppen) == 1:
+                gruppen_neu.append(gruppen[0])
+                continue
 
-            if anzahl_sim == 1 and self.obPrint:
-                print("Step: ", t)
-
-            # Die Gruppen werden an der Knote angepasst
-            grupp_akt1 = []
-            gruppen_map = defaultdict(list)
-            for g in self.gruppen:
-                gruppen_map[(g.current, g.target)].append(g)
-            for key, gruppen in gruppen_map.items():
-                if len(gruppen) == 1:
-                    grupp_akt1.append(gruppen[0])
-                else:
-                    gruppe = Gruppe([],gruppen[0].current, gruppen[0].x, gruppen[0].y)
-                    WHead_nr = any(g.role == 'WHead' for g in gruppen)
-                    for g in gruppen:
-                        kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
-
-                        if WHead_nr and g.role == 'Ampel':
-                            g.role = 'WAmpel'
-                        if len(kinder) == 1 and g.role == 'WAmpel':
-                            gruppe.roboter += g.roboter
-                            gruppe.anzahl = len(gruppe.roboter)
-                            gruppe.role = 'WHead'
-                        elif len(kinder) > 0:
-                            if g.role in ('Ampel', 'WAmpel'):
-                                grupp_akt1.append(g)
-                            else:
-                                gruppe.roboter += g.roboter
-                                gruppe.anzahl = len(gruppe.roboter)
-                        else:
-                            gruppe.roboter += g.roboter
-                            gruppe.anzahl = len(gruppe.roboter)
-
-                    grupp_akt1.append(gruppe)
-            self.gruppen = grupp_akt1
-
-            #Die Gruppen werden an der Knote verteilt
-            grupp_akt = []
-            for g in self.gruppen:
-                if g.role == 'Head':
-                    # Robot an der Kreuzung
-                    if g.current == g.target:
-                        kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
-                        eltern = self.getEltern(g.current)
-                        if g.current != 0 and color_node[g.current] == 'green' :
-                            color_node[g.current] = 'yellow'
-
-                            self.graph[eltern][g.current] = 'y'
-                            if len(kinder) > 0:
-                                if g.anzahl > 1:
-                                    ampel = g.roboter[-1]
-                                    g.roboter.remove(ampel)
-                                    g.anzahl -= 1
-                                    ampel_gruppe = Gruppe([ampel], g.current, g.x, g.y)
-                                    if g.current == 1:
-                                        ampel_gruppe.role = 'WAmpel'
-                                    else:
-                                        ampel_gruppe.role = 'Ampel'
-                                    ampel_gruppe.current = g.current
-                                    ampel_gruppe.target = g.current
-                                    grupp_akt.append(ampel_gruppe)
-                                else:
-                                    g.role = 'Ampel'
-                                    g.target = g.current
-                                    grupp_akt.append(g)
-                                    continue
-                        # Es gibt noch Pfade
-                        if len(kinder) != 0:
-                            # Es gibt nur ein Pfad
-                            if len(kinder) == 1:
-                                g.target = list(kinder.keys())[0]
-                                grupp_akt.append(g)
-                            # Es gibt mehrere Pfade
-                            else:
-                                kinder_g = [k for k, v in kinder.items() if v == 'g']
-                                kinder_y = [k for k, v in kinder.items() if v == 'y']
-                                # Es gibt grüne Pfade
-                                if len(kinder_g) != 0:
-                                    anzahlG = len(kinder_g)
-                                    # Es gibt 3 Pfade, aber 2 Roboter
-                                    if anzahlG == 3 and len(g.roboter) == 2:
-                                        new_gruppen = [[] for _ in range(len(g.roboter))]
-                                        for i, elem in enumerate(g.roboter):
-                                            new_gruppen[i % anzahlG].append(elem)
-                                        # Für jede neue Gruppe ein eigenes Ziel zuweisen
-                                        for i in range(len(new_gruppen)):
-                                            zufall = random.choice(kinder_g)
-                                            kinder_g.remove(zufall)
-                                            group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
-                                            group.target = zufall
-                                            grupp_akt.append(group)
-                                    # Es gibt nur ein Robot
-                                    elif len(g.roboter) == 1:
-                                        zufall = random.choice(kinder_g)
-                                        kinder_g.remove(zufall)
-                                        g.target = zufall
-                                        grupp_akt.append(g)
-                                    # Normale Verteilung
-                                    else:
-                                        new_gruppen = [[] for _ in range(anzahlG)]
-                                        for i, elem in enumerate(g.roboter):
-                                            new_gruppen[i % anzahlG].append(elem)
-                                        # Für jede neue Gruppe ein eigenes Ziel zuweisen
-                                        for i in range(anzahlG):
-                                            zufall = random.choice(kinder_g)
-                                            kinder_g.remove(zufall)
-                                            group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
-                                            group.target = zufall
-                                            grupp_akt.append(group)
-                                # Es gibt nur gelbe Pfade
-                                else:
-                                    anzahlG = len(kinder_y)
-                                    # Es 3 Pfade, aber 2 Roboter
-                                    if anzahlG == 3 and len(g.roboter) == 2:
-                                        new_gruppen = [[] for _ in range(len(g.roboter))]
-                                        for i, elem in enumerate(g.roboter):
-                                            new_gruppen[i % anzahlG].append(elem)
-                                        # Für jede neue Gruppe ein eigenes Ziel zuweisen
-                                        for i in range(len(new_gruppen)):
-                                            zufall = random.choice(kinder_y)
-                                            kinder_y.remove(zufall)
-                                            group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
-                                            group.target = zufall
-                                            grupp_akt.append(group)
-                                    # Es gibt nur ein Robot
-                                    elif len(g.roboter) == 1:
-                                        zufall = random.choice(kinder_y)
-                                        kinder_y.remove(zufall)
-                                        g.target = zufall
-                                        grupp_akt.append(g)
-                                    # Normale Verteilung
-                                    else:
-                                        new_gruppen = [[] for _ in range(anzahlG)]
-                                        for i, elem in enumerate(g.roboter):
-                                            new_gruppen[i % anzahlG].append(elem)
-                                        # Für jede neue Gruppe ein eigenes Ziel zuweisen
-                                        for i in range(anzahlG):
-                                            zufall = random.choice(kinder_y)
-                                            kinder_y.remove(zufall)
-                                            group = Gruppe(new_gruppen[i], g.current, node_x[g.current], node_y[g.current])
-                                            group.target = zufall
-                                            grupp_akt.append(group)
-                        # Es gibt keine Pfade mehr
-                        else:
-                            # Kein Ziel -> zurück
-                            if g.current != self.ziel:
-                                g.target = eltern
-                                self.graph[eltern][g.current] = 'r'
-                                color_node[g.current] = 'red'
-                                grupp_akt.append(g)
-                    # Robot im Rohr
+            zusammengefasst = Gruppe([], gruppen[0].current, gruppen[0].x, gruppen[0].y)
+            hat_whead = any(g.role == 'WHead' for g in gruppen)
+            for g in gruppen:
+                kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
+                if hat_whead and g.role == 'Ampel':
+                    g.role = 'WAmpel'
+                if len(kinder) == 1 and g.role == 'WAmpel':
+                    zusammengefasst.roboter += g.roboter
+                    zusammengefasst.anzahl = len(zusammengefasst.roboter)
+                    zusammengefasst.role = 'WHead'
+                elif len(kinder) > 0:
+                    if g.role in ('Ampel', 'WAmpel'):
+                        gruppen_neu.append(g)
                     else:
-                        self.move(g,node_x, node_y, steps_robot)
-                        grupp_akt.append(g)
-                elif g.role == 'WHead':
-                    if g.current == g.target and g.current != self.ziel:
-                        kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
-                        Wkinder = [k for k, v in kinder.items()]
-                        g.target = Wkinder[0]
-                        grupp_akt.append(g)
-                    else:
-                        if g.current != self.ziel:
-                            self.move(g,node_x, node_y, steps_robot)
-                            grupp_akt.append(g)
+                        zusammengefasst.roboter += g.roboter
+                        zusammengefasst.anzahl = len(zusammengefasst.roboter)
                 else:
-                    grupp_akt.append(g)
+                    zusammengefasst.roboter += g.roboter
+                    zusammengefasst.anzahl = len(zusammengefasst.roboter)
+            gruppen_neu.append(zusammengefasst)
 
-            # Print alle Gruppen
-            if anzahl_sim == 1 and self.obPrint:
-                gruppen_mapP = defaultdict(list)
-                for g in self.gruppen:
-                    gruppen_mapP[(g.current, g.target)].append(g)
-                for key, gruppen in gruppen_mapP.items():
-                    if anzahl_sim == 1:
-                        gesamtanzahl = sum(g.anzahl for g in gruppen)
-                        rollen = [g.role for g in gruppen]
-                        if key[0] == key[1]:
-                            print(f"Position {key[0]} (statisch): {len(gruppen)} Gruppen; "
-                                  f"Gesamtanzahl Roboter: {gesamtanzahl}; Rollen: {rollen}")
-                        else:
-                            print(f"Position {key} (in Bewegung): {len(gruppen)} Gruppen; "
-                                  f"Gesamtanzahl Roboter: {gesamtanzahl}; Rollen: {rollen}")
-                print()
+        return gruppen_neu
 
-            # Plot die Gruppen
-            x = []
-            y = []
-            anzahl = []
-            for g in grupp_akt:
-                x.append(g.x)
-                y.append(g.y)
-                anzahl.append(g.anzahl)
-                if g == grupp_akt[-1]:
-                    frame_data.append(go.Scatter(x=x, y=y, mode='markers+text',
-                                             marker=dict(size=20, color=g.color),
-                                             text=anzahl, textposition="middle center"))
-            self.gruppen = grupp_akt
+    def _verteile_gruppe(self, g, ziel_kandidaten, node_x, node_y):
+        """Verteilt die Roboter von g zufällig auf die gegebenen Ziel-Kandidaten
+        (Kind-Knoten). Bei genau einem Roboter bleibt g eine einzelne Gruppe und
+        bekommt nur ein zufälliges Ziel zugewiesen."""
+        ziel_kandidaten = list(ziel_kandidaten)
+        anzahl_ziele = len(ziel_kandidaten)
 
-            frames.append(go.Frame(data=frame_data, name=f"f{t}"))
-            t += 1
-            if t > self.max_steps:
-                if self.statistic == None:
-                    print("Die maximale Zeit wurde überschritten!!!")
-                break
+        if len(g.roboter) == 1:
+            g.target = random.choice(ziel_kandidaten)
+            return [g]
 
-        if anzahl_sim == 1 and self.obPrint:
-            print("Steps: ",t)
-        if self.statistic != None:
-            self.statistic.add(t-1)
+        # Sonderfall: 3 mögliche Pfade, aber nur 2 Roboter -> jeder Roboter
+        # bekommt sein eigenes Ziel, ein Pfad bleibt in diesem Schritt unbesucht.
+        anzahl_teilgruppen = len(g.roboter) if anzahl_ziele == 3 and len(g.roboter) == 2 else anzahl_ziele
+        aufteilungen = [[] for _ in range(anzahl_teilgruppen)]
+        for i, roboter in enumerate(g.roboter):
+            aufteilungen[i % anzahl_ziele].append(roboter)
 
-        # Slider
-        steps = [{
+        neue_gruppen = []
+        for teil in aufteilungen:
+            zufall = random.choice(ziel_kandidaten)
+            ziel_kandidaten.remove(zufall)
+            gruppe = Gruppe(teil, g.current, node_x[g.current], node_y[g.current])
+            gruppe.target = zufall
+            neue_gruppen.append(gruppe)
+        return neue_gruppen
+
+    def _handle_head_gruppe(self, g, color_node, node_x, node_y, steps_robot):
+        """Bearbeitet eine Gruppe mit Rolle 'Head': Bewegung entlang der aktuellen
+        Kante, oder an einer Kreuzung: Ampel setzen, auf Kind-Knoten verteilen,
+        oder bei einer Sackgasse zum Elternknoten zurückfahren."""
+        if g.current != g.target:
+            self.move(g, node_x, node_y, steps_robot)
+            return [g]
+
+        kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
+        eltern = self.getEltern(g.current)
+
+        if g.current != 0 and color_node[g.current] == 'green':
+            color_node[g.current] = 'yellow'
+            self.graph[eltern][g.current] = 'y'
+            if len(kinder) > 0:
+                if g.anzahl > 1:
+                    ampel = g.roboter[-1]
+                    g.roboter.remove(ampel)
+                    g.anzahl -= 1
+                    ampel_gruppe = Gruppe([ampel], g.current, g.x, g.y)
+                    ampel_gruppe.role = 'WAmpel' if g.current == 1 else 'Ampel'
+                    ampel_gruppe.current = g.current
+                    ampel_gruppe.target = g.current
+                    # g wird unten (mit einem Roboter weniger) weiterverarbeitet.
+                    ergebnis = [ampel_gruppe]
+                else:
+                    g.role = 'Ampel'
+                    g.target = g.current
+                    return [g]
+            else:
+                ergebnis = []
+        else:
+            ergebnis = []
+
+        if len(kinder) != 0:
+            if len(kinder) == 1:
+                g.target = list(kinder.keys())[0]
+                ergebnis.append(g)
+            else:
+                kinder_g = [k for k, v in kinder.items() if v == 'g']
+                kinder_y = [k for k, v in kinder.items() if v == 'y']
+                kandidaten = kinder_g if kinder_g else kinder_y
+                ergebnis.extend(self._verteile_gruppe(g, kandidaten, node_x, node_y))
+        elif g.current != self.ziel:
+            g.target = eltern
+            self.graph[eltern][g.current] = 'r'
+            color_node[g.current] = 'red'
+            ergebnis.append(g)
+
+        return ergebnis
+
+    def _handle_whead_gruppe(self, g, node_x, node_y, steps_robot):
+        """Bearbeitet eine wartende Kopf-Gruppe ('WHead'): folgt automatisch dem
+        einzigen verbliebenen Pfad, bis das Ziel erreicht ist."""
+        if g.current == g.target and g.current != self.ziel:
+            kinder = {k: v for k, v in self.graph[g.current].items() if v != 'r'}
+            g.target = list(kinder.keys())[0]
+            return [g]
+        if g.current != self.ziel:
+            self.move(g, node_x, node_y, steps_robot)
+            return [g]
+        return []
+
+    def _advance_groups(self, color_node, node_x, node_y, steps_robot):
+        """Verarbeitet alle aktuellen Gruppen einen Simulationsschritt weiter."""
+        grupp_akt = []
+        for g in self.gruppen:
+            if g.role == 'Head':
+                grupp_akt.extend(self._handle_head_gruppe(g, color_node, node_x, node_y, steps_robot))
+            elif g.role == 'WHead':
+                grupp_akt.extend(self._handle_whead_gruppe(g, node_x, node_y, steps_robot))
+            else:
+                grupp_akt.append(g)
+        return grupp_akt
+
+    ### Debug-Ausgabe ###
+    def _debug_print_gruppen(self):
+        gruppen_map = defaultdict(list)
+        for g in self.gruppen:
+            gruppen_map[(g.current, g.target)].append(g)
+        for key, gruppen in gruppen_map.items():
+            gesamtanzahl = sum(g.anzahl for g in gruppen)
+            rollen = [g.role for g in gruppen]
+            if key[0] == key[1]:
+                print(f"Position {key[0]} (statisch): {len(gruppen)} Gruppen; "
+                      f"Gesamtanzahl Roboter: {gesamtanzahl}; Rollen: {rollen}")
+            else:
+                print(f"Position {key} (in Bewegung): {len(gruppen)} Gruppen; "
+                      f"Gesamtanzahl Roboter: {gesamtanzahl}; Rollen: {rollen}")
+        print()
+
+    ### Plot-Frame ###
+    def _gruppen_scatter(self, grupp_akt):
+        x, y, anzahl = [], [], []
+        farbe = 'white'
+        for g in grupp_akt:
+            x.append(g.x)
+            y.append(g.y)
+            anzahl.append(g.anzahl)
+            farbe = g.color
+        return go.Scatter(x=x, y=y, mode='markers+text',
+                           marker=dict(size=20, color=farbe),
+                           text=anzahl, textposition="middle center")
+
+    def _build_slider_steps(self, anzahl_frames):
+        return [{
             "label": f"{i}",
             "method": "animate",
             "args": [[f"f{i}"], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate"}]
-        } for i in range(t)]
+        } for i in range(anzahl_frames)]
+
+    def _apply_layout(self, fig, anzahl_frames):
         fig.update_layout(
             title="Mehrere Roboter im Baum",
             showlegend=False,
@@ -324,14 +268,63 @@ class MultiRobotSimulator:
             sliders=[{
                 "active": 0,
                 "pad": {"t": 40},
-                "steps": steps
+                "steps": self._build_slider_steps(anzahl_frames),
             }],
-
         )
+
+    ### Animation ###
+    def animate(self, steps_robot, anzahl_sim, statisches_ziel=None):
+        fig, edge_x, edge_y, node_x, node_y, color_node, node_text = self.create_base_figure()
+        color_node[0] = 'black'
+        color_node[self.ziel] = 'blue'
+        frames = []
+
+        # Initiale Positionen der Roboter
+        for g in self.gruppen:
+            fig.add_trace(go.Scatter(x=[g.x], y=[g.y], mode='markers+text',
+                                     marker=dict(size=20, color=g.getColor()),
+                                     text=[g.anzahl], textposition="middle center"))
+
+        t = -1
+        while len(self.gruppen) != 0:
+            if anzahl_sim == 1 and self.obPrint:
+                print("Step: ", t)
+
+            frame_data = [
+                go.Scatter(x=edge_x, y=edge_y, mode='lines',
+                           line=dict(color='black', width=2)),
+                go.Scatter(x=node_x, y=node_y, mode='markers+text',
+                           marker=dict(size=20, color=color_node),
+                           text=node_text, textposition="top center")
+            ]
+
+            self.gruppen = self._merge_groups_at_same_position()
+            grupp_akt = self._advance_groups(color_node, node_x, node_y, steps_robot)
+
+            if anzahl_sim == 1 and self.obPrint:
+                self._debug_print_gruppen()
+
+            if grupp_akt:
+                frame_data.append(self._gruppen_scatter(grupp_akt))
+            self.gruppen = grupp_akt
+
+            frames.append(go.Frame(data=frame_data, name=f"f{t}"))
+            t += 1
+            if t > self.max_steps:
+                if self.statistic is None:
+                    print("Die maximale Zeit wurde überschritten!!!")
+                break
+
+        if anzahl_sim == 1 and self.obPrint:
+            print("Steps: ", t)
+        if self.statistic is not None:
+            self.statistic.add(t - 1)
+
+        self._apply_layout(fig, t)
         fig.frames = frames
 
         if t > self.max_steps:
-            if self.statistic != None and self.durchfällePrint == True:
+            if self.statistic is not None and self.durchfaellePrint:
                 fig.show()
         elif anzahl_sim == 1:
             fig.show()

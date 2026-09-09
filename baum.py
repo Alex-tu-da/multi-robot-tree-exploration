@@ -28,13 +28,11 @@ class Baum:
     def füge_kante_hinzu(self, eltern, kind):
         self.füge_knoten_hinzu(eltern)
         self.füge_knoten_hinzu(kind)
-        if eltern not in self.kanten:
-            self.kanten[eltern] = {}
         self.kanten[eltern][kind] = 'g'
 
     def lösche_kante(self, eltern, kind):
         if eltern in self.kanten and kind in self.kanten[eltern]:
-            self.kanten[eltern].remove(kind)
+            del self.kanten[eltern][kind]
 
 
     def _berechne_positionen(self):
