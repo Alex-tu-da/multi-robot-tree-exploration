@@ -452,8 +452,7 @@ class dynamischeSim:
                     print(f"Zielrobot wurde von Robot am {zier_knote} gefunden, der von Konte {g.current} zur Knote {g.target} fuhrte!")
 
             # Gruppen werden bewegt
-            #self.gruppen = self.bewegung1(zier_knote, steps_robot, anzahlVonRobotern)
-            self.gruppen = self.bewegungSnace(steps_robot, anzahlVonRobotern)
+            self.gruppen = self.bewegung1(zier_knote, steps_robot, anzahlVonRobotern)
 
 
 
