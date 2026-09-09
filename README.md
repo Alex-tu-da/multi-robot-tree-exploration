@@ -45,13 +45,3 @@ wie vielen Robotern, wird über den Aufruf von `simulation(...)` am Ende von
 | `robot.py` / `robot1.py` | Einzelner Roboter |
 | `zielRobot.py` | Der sich bewegende Ziel-Roboter (dynamischer Modus) |
 | `statistic.py` | Sammelt min/max/Mittelwert über mehrere Simulationsläufe |
-
-## Bekannte Einschränkungen
-
-Dies ist ein Experimentier-/Lernprojekt, kein produktionsreifer Code:
-
-- Keine automatisierten Tests.
-- `dynamischeSim.py` ist deutlich komplexer und weniger dokumentiert als
-  `MultiRobotSimulator.py`.
-- Die Simulationsparameter werden aktuell direkt im Code (`main.py`) gesetzt,
-  nicht über Kommandozeilen-Argumente.
