@@ -22,6 +22,14 @@ def baum_aus_kanten(kanten):
     return baum
 
 
+def alle_knoten(kanten):
+    """Liefert alle Knotennummern, die in einem Kanten-Dict vorkommen."""
+    knoten = set(kanten.keys())
+    for kinder in kanten.values():
+        knoten.update(kinder)
+    return knoten
+
+
 def simulation(statistic_f, anzahl_sim, stat_rob, anzahl_rob, ziel, kanten, max_time,
                obPrint, durchfällePrint, statisches_ziel):
     """Startet die Simulation.
@@ -46,7 +54,17 @@ def simulation(statistic_f, anzahl_sim, stat_rob, anzahl_rob, ziel, kanten, max_
         statisches_ziel: Bei True bleibt der Zielknoten fest
             (MultiRobotSimulator). Bei False bewegt sich ein simulierter
             Ziel-Roboter durch den Baum (dynamischeSim).
+
+    Raises:
+        ValueError: Wenn `ziel` kein Knoten des übergebenen Baums (`kanten`) ist.
     """
+    knoten = alle_knoten(kanten)
+    if ziel not in knoten:
+        raise ValueError(
+            f"Zielknoten {ziel} kann nicht im Baum stehen: der Baum enthält "
+            f"nur die Knoten {min(knoten)} bis {max(knoten)}."
+        )
+
     if statistic_f:
         for i in range(stat_rob):
             statistic = Statistic(max_time, anzahl_sim)
