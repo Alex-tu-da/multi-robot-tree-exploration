@@ -74,6 +74,28 @@ simulation(
 )
 ```
 
+**Beispiel – einzelner Lauf, dynamisches Ziel:**
+
+Ein simulierter Ziel-Roboter bewegt sich selbst durch den Baum, die
+suchenden Roboter verfolgen ihn, sobald sie ihn entdecken.
+
+```python
+from beispielbaeume import kanten1
+
+simulation(
+    statistic_f=False,
+    anzahl_sim=1,
+    stat_rob=10,
+    anzahl_rob=13,
+    ziel=21,
+    kanten=kanten1,
+    max_time=500,
+    obPrint=True,
+    durchfällePrint=True,
+    statisches_ziel=False,
+)
+```
+
 Denk daran, den passenden Baum aus `beispielbaeume.py` zu importieren (z. B.
 `from beispielbaeume import kanten1` statt `baum5`), wenn du einen anderen als
 den Standardbaum nutzen willst.
